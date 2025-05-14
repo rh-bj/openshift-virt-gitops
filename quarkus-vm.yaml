@@ -69,7 +69,7 @@ spec:
                 - su - postgres -c 'psql -c "create database quarkus_test owner quarkus_test;"'
                 - sed -i 's/ident/md5/' /var/lib/pgsql/data/pg_hba.conf && sed -i 's/peer/md5/' /var/lib/pgsql/data/pg_hba.conf
                 - systemctl restart postgresql.service
-                - git clone https://github.com/rh-bjeon/quarkus-quickstarts && cd quarkus-quickstarts/hibernate-reactive-panache-quickstart
+                - git clone https://github.com/rh-bj/quarkus-quickstarts && cd quarkus-quickstarts/hibernate-reactive-panache-quickstart
                 - ./mvnw package -Dquarkus-profile=test && ./mvnw package
                 - cp /root/quarkus-quickstarts/hibernate-reactive-panache-quickstart/quarkus.service /etc/systemd/system/
                 - systemctl daemon-reload && systemctl start quarkus.service && systemctl enable quarkus.service
