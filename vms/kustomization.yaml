@@ -1,0 +1,9 @@
+---
+resources:
+  - quarkus-vm.yaml
+  - svc.yaml
+  - route.yaml
+commonLabels:
+  vm-name: vm-dr-sample
+generatorOptions:
+  disableNameSuffixHash: true

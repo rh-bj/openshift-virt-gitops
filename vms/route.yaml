@@ -1,0 +1,15 @@
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: vm-sample-app
+spec:
+  to:
+    kind: Service
+    name: dr-vm-svc
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: ''
+    destinationCACertificate: ''
+  path: /
+  port:
+    targetPort: 8080

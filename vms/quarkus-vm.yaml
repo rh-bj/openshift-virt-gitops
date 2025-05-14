@@ -1,0 +1,76 @@
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: sample-vm
+spec:
+  runStrategy: RerunOnFailure
+  dataVolumeTemplates:
+    - apiVersion: cdi.kubevirt.io/v1beta1
+      kind: DataVolume
+      metadata:
+        name: sample-vm
+        labels:
+          vm-name: vm-dr-sample
+      spec:
+        sourceRef:
+          kind: DataSource
+          name: rhel8
+          namespace: openshift-virtualization-os-images
+        storage:
+          resources:
+            requests:
+              storage: 30Gi
+  template:
+    metadata:
+      labels:
+        vm-name: vm-dr-sample
+    spec:
+      domain:
+        cpu:
+          cores: 1
+          sockets: 2
+          threads: 1
+        devices:
+          disks:
+            - disk:
+                bus: virtio
+              name: rootdisk
+            - disk:
+                bus: virtio
+              name: cloudinitdisk
+        memory:
+          guest: 4Gi
+        resources: {}
+      volumes:
+        - dataVolume:
+            name: sample-vm
+          name: rootdisk
+        - cloudInitConfigDrive:
+            userData: |
+              #cloud-config
+              user: cloud-user
+              password: redhat
+              chpasswd: { expire: False }
+              #rh_subscription:
+                #아래 두 값을 넣어주셔야 runcmd에서 바로 dnf 가능합니다
+                #activation-key: 
+                #org: 
+              runcmd:
+                - dnf install glibc-devel zlib-devel gcc freetype-devel libstdc++ git java-21-openjdk-devel unzip apr postgresql-server -y
+                - cd /root && curl -O -J -L "https://github.com/graalvm/mandrel/releases/download/mandrel-23.1.5.0-Final/mandrel-java21-linux-amd64-23.1.5.0-Final.tar.gz"
+                - tar -xf mandrel-java21-linux-amd64-23.1.5.0-Final.tar.gz
+                - export JAVA_HOME="$( pwd )/mandrel-java21-23.1.5.0-Final"
+                - export GRAALVM_HOME="${JAVA_HOME}" PATH="${JAVA_HOME}/bin:${PATH}"
+                - postgresql-setup --initdb
+                - systemctl start postgresql.service && systemctl enable postgresql.service
+                - sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
+                - sudo -u postgres psql -c "CREATE USER quarkus_test WITH PASSWORD 'quarkus_test' SUPERUSER;"
+                - su - postgres -c 'psql -c "create database quarkus_test owner quarkus_test;"'
+                - sed -i 's/ident/md5/' /var/lib/pgsql/data/pg_hba.conf && sed -i 's/peer/md5/' /var/lib/pgsql/data/pg_hba.conf
+                - systemctl restart postgresql.service
+                - git clone https://github.com/rh-bjeon/quarkus-quickstarts && cd quarkus-quickstarts/hibernate-reactive-panache-quickstart
+                - ./mvnw package -Dquarkus-profile=test && ./mvnw package
+                - cp /root/quarkus-quickstarts/hibernate-reactive-panache-quickstart/quarkus.service /etc/systemd/system/
+                - systemctl daemon-reload && systemctl start quarkus.service && systemctl enable quarkus.service
+          name: cloudinitdisk
